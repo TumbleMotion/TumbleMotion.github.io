@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bounce Motion</title>
+<style>
+  :root{
+    --bg-sidebar:#0f0f11; --bg-head:#131315; --bg-section:#19191c; --bg-well:#09090b;
+    --bg-stage:#1c1c1f; --border:#2b2b2f; --border-soft:#222226;
+    --text:#ececea; --text-dim:#9d9b94; --text-faint:#6c6a64;
+    --accent:#e3aa4e; --accent-dim:#4a3a1d; --danger:#d06a60;
+    --path:#5cc8d8; --apex:#a678e6; --land:#4ec97a;
+    --mono:"SF Mono","Cascadia Code",Consolas,monospace;
+    --sans:-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg-stage);color:var(--text);
+    font-family:var(--sans);-webkit-font-smoothing:antialiased;}
+  ::selection{background:rgba(227,170,78,0.28);}
+  #app{display:flex;height:100vh;overflow:hidden;}
+
+  #sidebar{width:296px;flex-shrink:0;background:var(--bg-sidebar);
+    border-right:1px solid var(--border);display:flex;flex-direction:column;}
+  #sidebarScroll{flex:1;overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:thin;scrollbar-color:#313135 transparent;}
+  #sidebarScroll::-webkit-scrollbar{width:8px;}
+  #sidebarScroll::-webkit-scrollbar-thumb{background:#313135;}
+  #sidebarScroll::-webkit-scrollbar-track{background:transparent;}
+
+  #appHeader{display:flex;align-items:baseline;gap:9px;padding:17px 16px 15px;
+    border-bottom:1px solid var(--border-soft);
+    background:linear-gradient(180deg,#16161a 0%,var(--bg-head) 100%);}
+  #appHeader h1{font-size:14.5px;margin:0;letter-spacing:0.01em;font-weight:650;}
+  #appHeader .v{color:var(--accent);font-weight:600;font-size:9.5px;font-family:var(--mono);
+    border:1px solid var(--accent-dim);padding:1.5px 6px;letter-spacing:0.05em;
+    background:rgba(227,170,78,0.05);}
+
+  section{border-bottom:1px solid var(--border-soft);padding:0 16px 14px;}
+  .sec-head{display:flex;align-items:center;gap:9px;padding:13px 0 11px;
+    font-size:10px;text-transform:uppercase;letter-spacing:0.12em;
+    color:var(--text-dim);font-weight:600;}
+  .sec-head .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+
+  label.field{display:block;font-size:11.5px;color:var(--text-dim);margin-bottom:11px;}
+  label.field>span{display:block;margin-bottom:5px;width:fit-content;}
+  input[type=number],input[type=text],select{
+    width:100%;background:var(--bg-well);border:1px solid var(--border);color:var(--text);
+    padding:7px 9px;border-radius:0;font-family:var(--mono);font-size:12.5px;
+    transition:border-color 0.12s ease;}
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+  input[type=number]{appearance:textfield;-moz-appearance:textfield;}
+  input:hover:not(:disabled),select:hover:not(:disabled){border-color:#3d3d42;}
+  input:focus,select:focus{border-color:var(--accent-dim);outline:none;}
+  input:focus-visible,select:focus-visible,button:focus-visible{outline:1px solid var(--accent);outline-offset:1px;}
+  input:disabled,select:disabled{opacity:0.35;}
+  select{cursor:pointer;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5L9 0z' fill='%236c6a64'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 9px center;padding-right:24px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .checkbox{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--text-dim);
+    cursor:pointer;margin-bottom:11px;transition:color 0.12s ease;}
+  .checkbox:hover{color:var(--text);}
+  .checkbox input{accent-color:var(--accent);}
+
+  button{width:100%;padding:8px 10px;margin-top:6px;border-radius:0;
+    border:1px solid var(--border);background:var(--bg-section);color:var(--text);
+    font-size:12px;cursor:pointer;font-family:var(--sans);
+    transition:background 0.12s ease,border-color 0.12s ease,color 0.12s ease;}
+  button:hover:not(:disabled){border-color:#4a4a50;background:#202024;}
+  button:active:not(:disabled){background:#151518;}
+  button:disabled{opacity:0.32;cursor:default;}
+  button.primary{background:linear-gradient(180deg,#edb95f 0%,#d99a3c 100%);
+    border-color:#a87e2e;color:#191104;font-weight:600;}
+  button.primary:hover:not(:disabled){background:linear-gradient(180deg,#f4c46e 0%,#e2a545 100%);}
+  button.danger{color:var(--danger);border-color:#40292a;}
+  button.danger:hover:not(:disabled){border-color:#5c3a37;background:rgba(208,106,96,0.06);}
+  .btn-row{display:flex;gap:8px;}
+  .btn-row button{margin-top:0;flex:1 1 0;min-width:0;}
+
+  #bounceList{margin:2px 0 0;}
+  .bounce-row{display:flex;align-items:center;gap:9px;padding:7px 8px;
+    border:1px solid transparent;cursor:pointer;font-size:11.5px;color:var(--text-dim);
+    transition:background 0.12s ease,border-color 0.12s ease,color 0.12s ease;}
+  .bounce-row:hover{background:rgba(255,255,255,0.02);color:var(--text);}
+  .bounce-row.sel{border-color:var(--accent-dim);background:rgba(227,170,78,0.06);color:var(--text);}
+  .bounce-row .n{font-family:var(--mono);font-size:10px;color:var(--text-faint);
+    min-width:16px;text-align:right;}
+  .bounce-row.sel .n{color:var(--accent);}
+  .bounce-row .meta{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-faint);}
+  .empty{font-size:11.5px;color:var(--text-faint);line-height:1.55;padding:4px 0 2px;}
+
+  #stage{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg-stage);}
+  #canvasWrap{flex:1;display:flex;align-items:center;justify-content:center;
+    padding:22px;min-height:0;position:relative;}
+  canvas{max-width:100%;max-height:100%;background:#111113;cursor:crosshair;
+    border:1px solid var(--border);}
+  #zoomCtrl{position:absolute;top:10px;right:10px;display:flex;align-items:stretch;
+    background:rgba(15,15,17,0.62);border:1px solid var(--border-soft);}
+  #zoomCtrl button{font-family:var(--mono);font-size:11px;color:var(--text-dim);
+    background:transparent;border:none;padding:3px 8px;cursor:pointer;line-height:1.4;
+    width:auto;margin:0;}
+  #zoomCtrl button:hover{color:var(--accent);background:transparent;border:none;}
+  #zoomReadout{min-width:44px;text-align:center;letter-spacing:0.03em;}
+  #transport{border-top:1px solid var(--border);background:var(--bg-head);
+    padding:11px 16px;display:flex;align-items:center;gap:14px;}
+  #transport button{width:auto;margin:0;padding:6px 16px;flex-shrink:0;}
+  #scrub{flex:1;appearance:none;height:3px;background:var(--border);cursor:pointer;min-width:0;}
+  #scrub::-webkit-slider-thumb{appearance:none;width:11px;height:11px;border-radius:50%;
+    background:var(--accent);cursor:pointer;}
+  #scrub::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:var(--accent);
+    border:none;cursor:pointer;}
+  #timeRead{font-family:var(--mono);font-size:11px;color:var(--text-dim);
+    min-width:96px;text-align:right;flex-shrink:0;}
+  #hint{font-size:11px;color:var(--text-faint);padding:0 16px 11px;font-family:var(--mono);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div id="appHeader"><h1>Bounce Motion</h1><span class="v">v1.0</span></div>
+    <div id="sidebarScroll">
+
+      <section>
+        <div class="sec-head"><span class="dot" style="background:#c9c5bd"></span>Scene</div>
+        <div class="btn-row">
+          <button id="saveBtn" disabled>Save scene</button>
+          <button id="loadBtn">Load scene</button>
+        </div>
+        <input type="file" id="loadInput" accept=".bounce,application/json" hidden>
+      </section>
+
+      <section>
+        <div class="sec-head"><span class="dot" style="background:#d99a3c"></span>Ball</div>
+        <div class="grid-2">
+          <label class="field"><span>Radius</span><input type="number" id="radiusInput" value="48" min="4" max="400" step="2"></label>
+          <label class="field"><span>Colour</span><input type="text" id="colourInput" value="#e3aa4e"></label>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head"><span class="dot" style="background:#5cc8d8"></span>Comp</div>
+        <div class="grid-2">
+          <label class="field"><span>Width</span><input type="number" id="widthInput" value="1920" min="250" max="4000" step="10"></label>
+          <label class="field"><span>Height</span><input type="number" id="heightInput" value="1080" min="250" max="4000" step="10"></label>
+        </div>
+        <label class="field"><span>Frame rate</span><input type="number" id="fpsInput" value="30" min="12" max="120" step="1"></label>
+      </section>
+
+      <section>
+        <div class="sec-head"><span class="dot" style="background:#8a8a85"></span>View</div>
+        <label class="checkbox"><input type="checkbox" id="showDotsInput" checked> Spacing dots</label>
+        <label class="checkbox"><input type="checkbox" id="showGridInput" checked> Show grid</label>
+        <label class="field"><span>Grid size (px)</span><input type="number" id="gridSizeInput" value="60" min="5" max="500" step="5"></label>
+      </section>
+
+      <section>
+        <div class="sec-head"><span class="dot" style="background:#6c6a64"></span>Guide image</div>
+        <div class="btn-row">
+          <button id="bgImgBtn" type="button">Choose image</button>
+          <button id="bgImgClearBtn" disabled>Clear</button>
+        </div>
+        <input type="file" id="bgImgInput" accept="image/png,image/jpeg" hidden>
+        <span id="bgImgLabel" style="font-size:11px;color:var(--text-dim);display:block;margin-top:7px;">No image chosen</span>
+        <label class="field" style="margin-top:11px;"><span>Opacity (%)</span>
+          <input type="number" id="bgImgOpacity" value="50" min="0" max="100" step="5">
+        </label>
+        <div class="grid-2">
+          <label class="field"><span>X</span><input type="number" id="bgImgX" value="0" step="1"></label>
+          <label class="field"><span>Y</span><input type="number" id="bgImgY" value="0" step="1"></label>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head"><span class="dot" style="background:#4ec97a"></span>Bounces</div>
+        <div id="bounceList"></div>
+        <div class="btn-row" style="margin-top:8px">
+          <button id="delBtn" class="danger" disabled>Delete</button>
+          <button id="clearBtn" class="danger" disabled>Clear all</button>
+        </div>
+      </section>
+
+      <section id="editSec">
+        <div class="sec-head"><span class="dot" style="background:#a678e6"></span><span id="editTitle">Bounce</span></div>
+        <div id="editBody">
+          <div class="grid-2">
+            <label class="field"><span>Travel (s)</span><input type="number" id="durInput" value="0.6" min="0.05" max="10" step="0.05" title="How long this hop takes. Follows the arc height automatically until you type a value here."></label>
+            <label class="field"><span>Hang (s)</span><input type="number" id="holdInput" value="0" min="0" max="5" step="0.05" title="Extra time spent floating near the top of the arc. The ball eases into the hang and out of it rather than stopping dead."></label>
+          </div>
+          <label class="checkbox"><input type="checkbox" id="autoTimeInput" checked title="Derive the travel time from how tall the arc is, the way a real bounce works. Typing a travel time turns this off."> Travel time follows arc height</label>
+          <label class="field"><span>Hang ease (%)</span><input type="number" id="hangEaseInput" value="100" min="0" max="200" step="10" title="How sharply the ball slows into the hang and speeds back up. 0 spreads the extra time evenly across the hop, 100 is natural, and up to 200 makes it float harder — enough to come almost to a stop at the top."></label>
+          <div class="grid-2">
+            <label class="field"><span>Squash</span><input type="number" id="squashInput" value="0.3" min="0" max="0.9" step="0.05" title="How much the ball flattens on landing. Pressed into the surface it hits, whatever angle that is."></label>
+            <label class="field"><span>Stretch</span><input type="number" id="stretchInput" value="0.3" min="0" max="2.5" step="0.1" title="How much the ball elongates while travelling. Scales with actual speed, so a lazy hop barely deforms and a quick one smears. Past about 1 it stops being physical and starts being cartoon, which is often the point."></label>
+          </div>
+          <label class="field"><span>Squash time (s)</span><input type="number" id="squashDurInput" value="0.14" min="0.02" max="1" step="0.02" title="How long the squash lasts, centred on the moment of contact."></label>
+        </div>
+        <div id="editEmpty" class="empty">Select a bounce to adjust it.</div>
+      </section>
+
+      <section style="border-bottom:none">
+        <div class="sec-head"><span class="dot" style="background:#e3aa4e"></span>Export</div>
+        <button id="exportBtn" class="primary" disabled>Export to After Effects</button>
+      </section>
+
+    </div>
+  </div>
+
+  <div id="stage">
+    <div id="canvasWrap">
+      <canvas id="c"></canvas>
+      <div id="zoomCtrl">
+        <button id="zoomOutBtn" title="Zoom out (the scroll wheel also zooms)">&minus;</button>
+        <button id="zoomReadout" title="Reset zoom">100%</button>
+        <button id="zoomInBtn" title="Zoom in (the scroll wheel also zooms)">+</button>
+      </div>
+    </div>
+    <div id="hint">Scroll to zoom &middot; middle-drag or Alt-drag to pan &middot; Shift or Ctrl-click bounces to select several</div>
+    <div id="transport">
+      <button id="playBtn" disabled>Play</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0">
+      <span id="timeRead">0.00s / 0.00s</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Bounce Motion — a keyframe bounce animator.
+//
+// Deliberately NOT a physics simulation. Every landing is a place the author
+// chose, and every hop is authored: its arc, its timing, its hang, its squash.
+// Physics only shows up in the defaults, so the first thing you draw already
+// looks like gravity and you only change what you actually want to change.
+// ---------------------------------------------------------------------------
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const radiusInput   = document.getElementById('radiusInput');
+const colourInput   = document.getElementById('colourInput');
+const widthInput    = document.getElementById('widthInput');
+const heightInput   = document.getElementById('heightInput');
+const fpsInput      = document.getElementById('fpsInput');
+const showGridInput = document.getElementById('showGridInput');
+const showDotsInput = document.getElementById('showDotsInput');
+const gridSizeInput = document.getElementById('gridSizeInput');
+const bgImgBtn      = document.getElementById('bgImgBtn');
+const bgImgClearBtn = document.getElementById('bgImgClearBtn');
+const bgImgInput    = document.getElementById('bgImgInput');
+const bgImgLabel    = document.getElementById('bgImgLabel');
+const bgImgOpacity  = document.getElementById('bgImgOpacity');
+const bgImgX        = document.getElementById('bgImgX');
+const bgImgY        = document.getElementById('bgImgY');
+// Purely a placement reference — the guide is never exported.
+let bgImg = null;
+const bounceList    = document.getElementById('bounceList');
+const delBtn        = document.getElementById('delBtn');
+const clearBtn      = document.getElementById('clearBtn');
+const editTitle     = document.getElementById('editTitle');
+const editBody      = document.getElementById('editBody');
+const editEmpty     = document.getElementById('editEmpty');
+const durInput      = document.getElementById('durInput');
+const autoTimeInput = document.getElementById('autoTimeInput');
+const holdInput     = document.getElementById('holdInput');
+const hangEaseInput = document.getElementById('hangEaseInput');
+const squashInput   = document.getElementById('squashInput');
+const squashDurInput= document.getElementById('squashDurInput');
+const stretchInput  = document.getElementById('stretchInput');
+const exportBtn     = document.getElementById('exportBtn');
+const playBtn       = document.getElementById('playBtn');
+const scrub         = document.getElementById('scrub');
+const timeRead      = document.getElementById('timeRead');
+const saveBtn       = document.getElementById('saveBtn');
+const loadBtn       = document.getElementById('loadBtn');
+const loadInput     = document.getElementById('loadInput');
+const zoomInBtn     = document.getElementById('zoomInBtn');
+const zoomOutBtn    = document.getElementById('zoomOutBtn');
+const zoomReadout   = document.getElementById('zoomReadout');
+
+// ---------- State ----------
+// points[0] is where the ball starts. points[i] for i>=1 is a landing.
+// segments[i] describes the hop from points[i] to points[i+1], so there is
+// always exactly one fewer segment than there are points.
+let points = [];
+let segments = [];
+// Selection is a set: several bounces can be edited at once. selAnchor is the
+// fixed end of a shift-range, so shift-clicking extends from the last plain
+// click rather than from whatever happens to be lowest.
+let selectedIdx = new Set();
+let selAnchor = null;
+let playing = false;
+let playT = 0;
+let lastFrameMs = 0;
+let drag = null;          // { kind:'point'|'apex', index }
+
+// ---------- Canvas view (zoom + pan) ----------
+// The view transform sits between canvas pixels and world (comp) coordinates.
+// Everything in the scene is drawn in world coordinates, so applying one
+// transform at the top of render() and inverting it in worldPoint() covers
+// every feature at once. Screen furniture — the placement prompt — is drawn
+// after the transform is reset so it never scales or drifts.
+let viewZoom = 1;
+let viewPanX = 0;
+let viewPanY = 0;
+let panDrag = null;
+
+// Rounded to 2dp. Everything this guards is seconds or a fraction, and 10ms is
+// finer than a frame at any supported rate, so trailing digits only serve to
+// clutter the field — travelFor in particular produces values like 0.4057204.
+const clampNum = (raw, min, max, fallback) => {
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.round(Math.min(max, Math.max(min, n)) * 100) / 100;
+};
+const clampInt = (raw, min, max, fallback) => {
+  const n = Math.round(parseFloat(raw));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+};
+const cfg = () => ({
+  r: clampInt(radiusInput.value, 4, 400, 48),
+  colour: /^#[0-9a-f]{3,8}$/i.test(colourInput.value.trim()) ? colourInput.value.trim() : '#e3aa4e',
+  w: clampInt(widthInput.value, 250, 4000, 1920),
+  h: clampInt(heightInput.value, 250, 4000, 1080),
+  fps: clampInt(fpsInput.value, 12, 120, 30),
+  grid: clampInt(gridSizeInput.value, 5, 500, 60),
+});
+
+// Handles are drawn in world coordinates but need to stay the same size on
+// screen: at 1920x1080 zoomed out, a 6px handle would render as an unclickable
+// speck. uiScale() converts screen pixels to world units, so every handle size
+// and hit radius is multiplied by it. Hit-testing uses the same figure, so what
+// you can see is exactly what you can grab.
+function uiScale() {
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width) return 1;
+  return (canvas.width / rect.width) / viewZoom;
+}
+
+// ---------- Arc geometry ----------
+// Each hop is a quadratic Bézier, but the handle the author drags is the APEX —
+// a point the curve genuinely passes through at t=0.5 — rather than a Bézier
+// control point floating off the curve, which is confusing to aim with.
+// Solving B(0.5)=apex gives control = 2*apex - (P0+P1)/2.
+function controlFor(p0, p1, apex) {
+  return { x: 2*apex.x - (p0.x + p1.x)/2, y: 2*apex.y - (p0.y + p1.y)/2 };
+}
+function arcPoint(p0, p1, apex, t) {
+  const c = controlFor(p0, p1, apex), mt = 1 - t;
+  return {
+    x: mt*mt*p0.x + 2*mt*t*c.x + t*t*p1.x,
+    y: mt*mt*p0.y + 2*mt*t*c.y + t*t*p1.y,
+  };
+}
+function arcTangent(p0, p1, apex, t) {
+  const c = controlFor(p0, p1, apex);
+  return { x: 2*(1-t)*(c.x-p0.x) + 2*t*(p1.x-c.x),
+           y: 2*(1-t)*(c.y-p0.y) + 2*t*(p1.y-c.y) };
+}
+// A default arc that already looks like gravity: centred horizontally (which is
+// what makes the motion physical) and lifted above whichever end is higher.
+function defaultApex(p0, p1) {
+  const chord = Math.hypot(p1.x-p0.x, p1.y-p0.y);
+  const lift = Math.min(520, Math.max(90, chord * 0.45));
+  return { x: (p0.x + p1.x)/2, y: Math.min(p0.y, p1.y) - lift };
+}
+// Flight time derived from the arc rather than picked out of the air. For a
+// projectile t = 2*sqrt(2h/g), which depends on HEIGHT and not on distance — so
+// a tall bounce hangs and a shallow one snaps past. Horizontal speed therefore
+// rises with distance, which is also correct: flight time is set by height, so
+// covering more ground means moving faster. A fixed time for every hop made
+// short bounces crawl and long ones rocket. g is scaled to the comp height so a
+// bounce of the same relative size feels the same at any resolution.
+function travelFor(p0, p1, apex) {
+  const g = Math.max(1, cfg().h * 9);
+  const h = (p0.y + p1.y) / 2 - apex.y;
+  if (!(h > 0)) {
+    // Apex level with or below the chord: not an arc in the usual sense, so
+    // fall back to chord length at a middling speed rather than returning zero.
+    return clampNum(Math.hypot(p1.x - p0.x, p1.y - p0.y) / 1400, 0.05, 10, 0.6);
+  }
+  return clampNum(2 * Math.sqrt(2 * h / g), 0.05, 10, 0.6);
+}
+
+// Re-derive a hop's travel time from its shape, unless the author has taken it
+// over by typing a value.
+function retimeAuto(i) {
+  const s = segments[i];
+  if (!s || s.autoTime === false) return;
+  s.duration = travelFor(points[i], points[i+1], s.apex);
+}
+
+function newSegment(p0, p1) {
+  const apex = defaultApex(p0, p1);
+  return { apex, duration: travelFor(p0, p1, apex), autoTime: true, hold: 0, hangEase: 100,
+           squash: 0.3, squashDur: 0.14, stretch: 0.3 };
+}
+
+// ---------- Timeline ----------
+// A hop's clock is simply travel, with the hang stretching that travel rather
+// than interrupting it. Freezing the ball at the apex for a fixed pause
+// looked wrong because it is a velocity discontinuity — full speed, dead stop,
+// full speed — and the eye reads that as a hitch, not as floating. Instead the
+// hang buys extra time that is spent near the top: the ball eases into the
+// apex, drifts, and eases out. See rawProgress().
+const selList = () => [...selectedIdx].filter(i => i >= 0 && i < segments.length).sort((a,b) => a-b);
+const selSegs = () => selList().map(i => segments[i]);
+const isSel = i => selectedIdx.has(i);
+
+const segTotal = s => s.duration + s.hold;
+function totalTime() { return segments.reduce((a, s) => a + segTotal(s), 0); }
+
+function rawProgress(s, tt) {
+  if (tt <= 0) return 0;
+  const span = s.duration + s.hold;      // a hop lasts travel + hang
+  if (tt >= span) return 1;
+  const half = span / 2;
+  // k is how strongly the timing bends towards the apex: 0 leaves both halves
+  // exactly linear (a true constant-gravity arc), 1 brings the ball to a
+  // standstill at the top. Its base is the share of the hop given over to
+  // hanging, which is what keeps a hop with no hang perfectly linear no matter
+  // what Hang ease is set to. Hang ease then scales that, with room above 100%
+  // to push a given hang further than its time alone would suggest.
+  const k = Math.min(1, (s.hold / span) * ((s.hangEase ?? 100) / 100));
+  if (tt < half) {
+    // Rising: ease OUT, so speed tapers towards zero as the apex arrives.
+    const p = tt / half;
+    return 0.5 * ((1 - k) * p + k * (1 - (1 - p) * (1 - p)));
+  }
+  // Falling: the mirror image, easing IN so the ball gathers speed again.
+  // Both halves have the same slope at the apex, so there is no jump: the
+  // speed passes smoothly through its minimum instead of stopping dead.
+  const p = (tt - half) / half;
+  return 0.5 + 0.5 * ((1 - k) * p + k * p * p);
+}
+
+// Landings, precomputed for the squash pass: when contact happens, how hard,
+// and along which axis.
+//
+// The axis is the surface NORMAL, not the direction the ball happened to be
+// flying. Using the flight direction looked plausible but was wrong: a wide,
+// flat hop arrives at about 60 degrees, so the ball squashed smeared along its
+// path rather than pressed into the ground. The normal is the bisector of the
+// arrival and departure directions — which comes out vertical for a floor,
+// horizontal for a wall, and correctly angled for anything between, with no
+// special-casing.
+function unit(v) {
+  const d = Math.hypot(v.x, v.y);
+  return d < 1e-9 ? { x: 0, y: 0 } : { x: v.x / d, y: v.y / d };
+}
+function landings() {
+  const out = [];
+  let t = 0;
+  segments.forEach((s, i) => {
+    t += segTotal(s);
+    const nIn = unit(arcTangent(points[i], points[i+1], s.apex, 1));
+    const next = segments[i+1];
+    // The last landing has nothing to bounce into, so assume it would rebound
+    // the way a floor would send it. That yields a vertical squash, which is
+    // what a ball coming to rest on the ground should do.
+    const nOut = next
+      ? unit(arcTangent(points[i+1], points[i+2], next.apex, 0))
+      : { x: nIn.x, y: -nIn.y };
+    let nx = nOut.x - nIn.x, ny = nOut.y - nIn.y;
+    const len = Math.hypot(nx, ny);
+    if (len < 1e-9) { nx = 0; ny = -1; } else { nx /= len; ny /= len; }
+    out.push({ t, amt: s.squash, dur: s.squashDur, nx, ny });
+  });
+  return out;
+}
+
+// Where the ball is, and which way it is heading, at a given time. Split out
+// from ballAt() so the speed can be measured by sampling it, and so the spacing
+// dots can plot the path without paying for the squash and stretch work.
+function pathAt(T) {
+  if (!points.length) return null;
+  if (!segments.length) return { pos: { x: points[0].x, y: points[0].y }, dir: { x: 1, y: 0 } };
+  const total = totalTime();
+  const t = Math.max(0, Math.min(total, T));
+  let acc = 0;
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i], st = segTotal(s);
+    if (t <= acc + st || i === segments.length - 1) {
+      const local = Math.min(st, t - acc);
+      const u = rawProgress(s, local);
+      return {
+        pos: arcPoint(points[i], points[i+1], s.apex, u),
+        dir: unit(arcTangent(points[i], points[i+1], s.apex, u)),
+      };
+    }
+    acc += st;
+  }
+  return null;
+}
+function positionAt(T) { const r = pathAt(T); return r ? r.pos : null; }
+
+// Reference speed for stretch, in pixels per second — the speed at which the
+// Stretch setting is applied in full. Measured against real hops rather than
+// guessed: an ordinary hop peaks at roughly 1.2x the comp width per second and
+// a quick one at over 2x, so a reference of one comp width had almost
+// everything pegged at maximum and lost the speed response entirely. 2.5x
+// leaves a lazy hop barely deforming, ordinary hops around a third to a half,
+// and only genuinely fast motion near the top. Scaled to the comp so it means
+// the same thing at any size, and set once per render or export rather than
+// read per call.
+const STRETCH_REF_FACTOR = 2.5;
+let stretchRef = 1920 * STRETCH_REF_FACTOR;
+
+function ballAt(T) {
+  const here = pathAt(T);
+  if (!here) return null;
+  if (!segments.length) return { x: here.pos.x, y: here.pos.y, sx: 1, sy: 1, rot: 0 };
+  const total = totalTime();
+  const t = Math.max(0, Math.min(total, T));
+
+  // Squash: a triangular pulse peaking exactly at contact, so the ball is
+  // already compressing as it arrives and recovers as it leaves.
+  let amt = 0, share = 0, nx = here.dir.x, ny = here.dir.y;
+  landings().forEach(L => {
+    const half = L.dur / 2;
+    const d = Math.abs(t - L.t);
+    if (d < half) {
+      const p = 1 - d / half;
+      if (p * L.amt > amt) { amt = p * L.amt; share = p; nx = L.nx; ny = L.ny; }
+    }
+  });
+
+  // Stretch: proportional to how fast the ball is actually moving, so a lazy
+  // hop barely deforms and a quick one elongates. Measured from the path rather
+  // than assumed, which means hang, easing and travel time all feed into it for
+  // free. It is faded out through the impact so the ball reads as compressing
+  // on contact rather than fighting itself.
+  const e = 1 / 240;
+  const a = positionAt(Math.max(0, t - e)) || here.pos;
+  const b = positionAt(Math.min(total, t + e)) || here.pos;
+  const speed = Math.hypot(b.x - a.x, b.y - a.y) / (2 * e);
+  const seg = segments[Math.min(segments.length - 1, Math.max(0, segIndexAt(t)))];
+  const stretchAmt = (seg ? (seg.stretch ?? 0.25) : 0) *
+                     Math.min(1, speed / Math.max(1, stretchRef)) * (1 - share);
+
+  // Both effects act along one axis, so the layer rotates to it. Away from a
+  // landing that axis is the direction of travel; through the impact it turns
+  // to the surface normal, weighted by how far into the squash we are.
+  const ax = here.dir.x + (nx - here.dir.x) * share;
+  const ay = here.dir.y + (ny - here.dir.y) * share;
+  const axis = unit({ x: ax, y: ay });
+
+  const along = (1 + stretchAmt) * (1 - amt);
+  // Bulge the other way, damped: a strictly area-preserving ball (perp = 1/along)
+  // looks rubbery. A power law rather than a reciprocal, because the reciprocal
+  // ran away at the extremes — at full squash it ballooned the ball to 6.4x its
+  // width, which is what stopped the stretch ceiling being raised before. The
+  // two agree within about 2% at ordinary values and this one stays sane at 3x.
+  const perp = Math.pow(Math.max(0.05, along), -0.6);
+  return {
+    x: here.pos.x, y: here.pos.y,
+    sx: along, sy: perp,
+    rot: (axis.x === 0 && axis.y === 0) ? 0 : Math.atan2(axis.y, axis.x),
+  };
+}
+
+// Which hop is running at time t.
+function segIndexAt(t) {
+  let acc = 0;
+  for (let i = 0; i < segments.length; i++) {
+    acc += segTotal(segments[i]);
+    if (t <= acc) return i;
+  }
+  return segments.length - 1;
+}
+
+// ---------- View helpers ----------
+function canvasPixel(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * (canvas.width / r.width),
+           y: (e.clientY - r.top) * (canvas.height / r.height) };
+}
+// Client coordinates → world (comp) coordinates. All interaction goes through
+// this, so zoom and pan are transparent to every other feature.
+function worldPoint(e) {
+  const p = canvasPixel(e);
+  return { x: (p.x - viewPanX) / viewZoom, y: (p.y - viewPanY) / viewZoom };
+}
+function setViewZoom(z, pivotPx) {
+  z = Math.max(0.25, Math.min(4, z));
+  const px = pivotPx || { x: canvas.width / 2, y: canvas.height / 2 };
+  // Keep the world point under the pivot fixed while the scale changes.
+  const wx = (px.x - viewPanX) / viewZoom;
+  const wy = (px.y - viewPanY) / viewZoom;
+  viewZoom = z;
+  viewPanX = px.x - wx * z;
+  viewPanY = px.y - wy * z;
+  updateZoomReadout();
+  render();
+}
+function resetView() { viewZoom = 1; viewPanX = 0; viewPanY = 0; updateZoomReadout(); render(); }
+function updateZoomReadout() { zoomReadout.textContent = Math.round(viewZoom * 100) + '%'; }
+
+// ---------- Rendering ----------
+function render() {
+  const c = cfg();
+  stretchRef = c.w * STRETCH_REF_FACTOR;
+  if (canvas.width !== c.w || canvas.height !== c.h) {
+    canvas.width = c.w; canvas.height = c.h;
+  }
+  const S = uiScale();
+
+  // Backdrop, only visible when zoomed out or panned off the comp.
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#141416';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.setTransform(viewZoom, 0, 0, viewZoom, viewPanX, viewPanY);
+  ctx.fillStyle = '#1b1b1e';
+  ctx.fillRect(0, 0, c.w, c.h);
+
+  // Guide image sits under the grid and the path, at the author's chosen
+  // opacity, and moves with the comp because it is drawn inside the transform.
+  if (bgImg) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, (parseFloat(bgImgOpacity.value) || 0) / 100));
+    ctx.drawImage(bgImg, parseFloat(bgImgX.value) || 0, parseFloat(bgImgY.value) || 0);
+    ctx.restore();
+  }
+
+  if (showGridInput.checked) drawGrid(c, S);
+
+  // Comp edge, so the frame boundary is unmistakable when zoomed out.
+  ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+  ctx.lineWidth = 1 * S;
+  ctx.strokeRect(0, 0, c.w, c.h);
+
+  // Paths first, so handles always sit on top of them.
+  segments.forEach((s, i) => {
+    const p0 = points[i], p1 = points[i+1];
+    const cp = controlFor(p0, p1, s.apex);
+    ctx.strokeStyle = isSel(i) ? 'rgba(92,200,216,0.95)' : 'rgba(92,200,216,0.35)';
+    ctx.lineWidth = 2 * S;
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.quadraticCurveTo(cp.x, cp.y, p1.x, p1.y);
+    ctx.stroke();
+  });
+
+  // Spacing dots: the ball's position on every exported frame. Bunched dots
+  // mean slow, spread dots mean fast — which is how animators read timing, and
+  // it makes the easing and hang visible without pressing play.
+  if (showDotsInput.checked) drawSpacingDots(c, S);
+
+  // Landing rings, drawn as the ball's own outline so the author is aiming the
+  // ball rather than a bare dot.
+  segments.forEach((s, i) => {
+    const p = points[i+1];
+    ctx.strokeStyle = isSel(i) ? 'rgba(78,201,122,0.95)' : 'rgba(78,201,122,0.45)';
+    ctx.lineWidth = 1.5 * S;
+    ctx.setLineDash([6*S, 5*S]);
+    ctx.beginPath(); ctx.arc(p.x, p.y, c.r, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Apex handles
+  segments.forEach((s, i) => {
+    const a = s.apex, d = 8 * S;
+    ctx.fillStyle = isSel(i) ? '#a678e6' : 'rgba(166,120,230,0.5)';
+    ctx.strokeStyle = '#5a3a8a'; ctx.lineWidth = 1.5 * S;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y-d); ctx.lineTo(a.x+d, a.y);
+    ctx.lineTo(a.x, a.y+d); ctx.lineTo(a.x-d, a.y);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  });
+
+  // Point handles
+  points.forEach((p, i) => {
+    ctx.fillStyle = i === 0 ? '#e3aa4e' : '#4ec97a';
+    ctx.strokeStyle = '#0b0b0d'; ctx.lineWidth = 2 * S;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 6 * S, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+  });
+
+  // The ball itself — absent until the author has placed a start.
+  const b = ballAt(playT);
+  if (b) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(b.rot);
+    ctx.scale(b.sx, b.sy);
+    ctx.fillStyle = c.colour;
+    ctx.beginPath(); ctx.arc(0, 0, c.r, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Screen furniture, drawn unscaled so it reads the same at any zoom.
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (!points.length) drawPlacePrompt();
+}
+
+function drawSpacingDots(c, S) {
+  if (!segments.length) return;
+  const total = totalTime();
+  // Skipped during playback: they carry no information once the ball is
+  // actually moving, and a long comp at 120fps is a lot of arcs per frame.
+  if (playing) return;
+  const n = Math.round(total * c.fps);
+  // Very long scenes would draw thousands of dots every render, so thin them
+  // out past a sensible ceiling; the spacing pattern still reads correctly.
+  const step = Math.max(1, Math.ceil(n / 1200));
+  ctx.fillStyle = 'rgba(236,236,234,0.42)';
+  for (let f = 0; f <= n; f += step) {
+    const p = positionAt(f / c.fps);
+    if (!p) continue;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2.5 * S, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawGrid(c, S) {
+  const g = c.grid;
+  ctx.lineWidth = 1 * S;
+  ctx.beginPath();
+  for (let x = g; x < c.w; x += g) { ctx.moveTo(x, 0); ctx.lineTo(x, c.h); }
+  for (let y = g; y < c.h; y += g) { ctx.moveTo(0, y); ctx.lineTo(c.w, y); }
+  ctx.strokeStyle = 'rgba(255,255,255,0.045)';
+  ctx.stroke();
+  // Centre lines, so the middle of the comp is findable at a glance.
+  ctx.beginPath();
+  ctx.moveTo(c.w/2, 0); ctx.lineTo(c.w/2, c.h);
+  ctx.moveTo(0, c.h/2); ctx.lineTo(c.w, c.h/2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.085)';
+  ctx.stroke();
+}
+
+// The empty state does the teaching: an untouched comp says exactly what to do,
+// and the instruction disappears the moment it has been followed.
+function drawPlacePrompt() {
+  const cw = canvas.width, ch = canvas.height;
+  const scale = cw / 1000;   // keep the prompt legible at any comp size
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(236,236,234,0.5)';
+  ctx.font = (26 * scale).toFixed(1) + 'px -apple-system, "Segoe UI", Roboto, system-ui, sans-serif';
+  ctx.fillText('Click to place the starting position', cw/2, ch/2 - 6*scale);
+  ctx.fillStyle = 'rgba(157,155,148,0.45)';
+  ctx.font = (14 * scale).toFixed(1) + 'px "SF Mono", Consolas, monospace';
+  ctx.fillText('then keep clicking to add each bounce', cw/2, ch/2 + 26*scale);
+  ctx.restore();
+}
+
+// ---------- UI ----------
+function rebuildList() {
+  bounceList.innerHTML = '';
+  if (!segments.length) {
+    const d = document.createElement('div');
+    d.className = 'empty';
+    d.textContent = points.length
+      ? 'Start placed. Click the canvas to add the first bounce.'
+      : 'Click the canvas to place the ball\u2019s starting position.';
+    bounceList.appendChild(d);
+    return;
+  }
+  segments.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'bounce-row' + (isSel(i) ? ' sel' : '');
+    row.innerHTML = '<span class="n">' + (i+1) + '</span><span>Bounce ' + (i+1) +
+      '</span><span class="meta">' + segTotal(s).toFixed(2) + 's</span>';
+    row.addEventListener('click', ev => { applySelect(i, ev); syncUI(); });
+    bounceList.appendChild(row);
+  });
+}
+// One selection gesture for both the list and the canvas: plain click replaces,
+// shift extends a range from the anchor, ctrl/cmd toggles one.
+function applySelect(i, ev) {
+  if (ev && ev.shiftKey && selAnchor !== null) {
+    const a = Math.min(selAnchor, i), b = Math.max(selAnchor, i);
+    selectedIdx = new Set();
+    for (let k = a; k <= b; k++) selectedIdx.add(k);
+  } else if (ev && (ev.ctrlKey || ev.metaKey)) {
+    if (selectedIdx.has(i)) selectedIdx.delete(i); else selectedIdx.add(i);
+    selAnchor = i;
+  } else {
+    selectedIdx = new Set([i]);
+    selAnchor = i;
+  }
+}
+
+function syncEditor() {
+  const segs = selSegs();
+  const has = segs.length > 0;
+  editBody.style.display = has ? '' : 'none';
+  editEmpty.style.display = has ? 'none' : '';
+  editTitle.textContent = !has ? 'Bounce'
+    : segs.length === 1 ? 'Bounce ' + (selList()[0] + 1)
+    : segs.length + ' bounces';
+  if (!has) return;
+  // A field shows a value only when every selected bounce agrees. Where they
+  // disagree it is left blank, which reads honestly as "mixed" and — because
+  // the handlers ignore an unparseable field — means nothing is overwritten
+  // until the author actually types something.
+  const agreed = key => segs.every(s => s[key] === segs[0][key]) ? segs[0][key] : '';
+  // Never rewrite the field currently being typed into: doing so would fight
+  // the caret mid-keystroke, so "0.6" would collapse to "0" on the way through.
+  const put = (el, v) => { if (el !== document.activeElement) el.value = v; };
+  put(durInput, agreed('duration'));
+  {
+    const all = segs.map(s => s.autoTime !== false);
+    autoTimeInput.checked = all.every(v => v === all[0]) ? all[0] : false;
+  }
+  put(holdInput, agreed('hold'));
+  put(hangEaseInput, agreed('hangEase'));
+  put(squashInput, agreed('squash'));
+  put(squashDurInput, agreed('squashDur'));
+  put(stretchInput, agreed('stretch'));
+}
+function syncUI() {
+  rebuildList(); syncEditor();
+  const hasSel = selList().length > 0;
+  delBtn.disabled = !hasSel;
+  clearBtn.disabled = !points.length;
+  exportBtn.disabled = segments.length === 0;
+  saveBtn.disabled = !points.length;
+  playBtn.disabled = segments.length === 0;
+  const total = totalTime();
+  timeRead.textContent = playT.toFixed(2) + 's / ' + total.toFixed(2) + 's';
+  scrub.value = total > 0 ? Math.round((playT / total) * 1000) : 0;
+  render();
+}
+
+// ---------- Canvas interaction ----------
+const HIT_SCREEN = 14;
+
+// What is under the pointer, if anything. Hover and click share this, so the
+// cursor can never promise something the click won't deliver. Apexes are tested
+// before points because an apex dragged down onto its own landing should still
+// be reachable.
+function handleAt(e) {
+  const p = worldPoint(e);
+  const hit = HIT_SCREEN * uiScale();
+  for (let i = 0; i < segments.length; i++) {
+    const a = segments[i].apex;
+    if (Math.hypot(p.x-a.x, p.y-a.y) < hit) return { kind:'apex', index:i };
+  }
+  for (let i = 0; i < points.length; i++) {
+    if (Math.hypot(p.x-points[i].x, p.y-points[i].y) < hit) return { kind:'point', index:i };
+  }
+  return null;
+}
+
+// One authority for the cursor. Panning and handle-dragging both want to own
+// it, so rather than each setting it directly and clobbering the other, every
+// state change just asks for a refresh.
+let hovering = null;
+function refreshCursor() {
+  canvas.style.cursor =
+    panDrag  ? 'grabbing'      // dragging the view
+    : drag   ? 'move'          // dragging a handle
+    : hovering ? 'move'        // over a handle
+    : 'crosshair';             // clicking here would add a bounce
+}
+
+canvas.addEventListener('pointerdown', e => {
+  if (e.button === 1 || (e.button === 0 && e.altKey)) return;   // pan handles these
+  const p = worldPoint(e);
+  const h = handleAt(e);
+  if (h && h.kind === 'apex') {
+    drag = h; applySelect(h.index, e); syncUI();
+    refreshCursor(); canvas.setPointerCapture(e.pointerId); return;
+  }
+  if (h && h.kind === 'point') {
+    drag = h;
+    if (h.index > 0) applySelect(h.index - 1, e);
+    syncUI(); refreshCursor(); canvas.setPointerCapture(e.pointerId); return;
+  }
+  // Empty space: first click sets the start, every click after adds a landing.
+  if (!points.length) { points.push(p); }
+  else {
+    points.push(p);
+    segments.push(newSegment(points[points.length-2], p));
+    selectedIdx = new Set([segments.length - 1]); selAnchor = segments.length - 1;
+  }
+  syncUI();
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drag) {
+    // Only touch the cursor when the answer actually changes, so an idle mouse
+    // sweep isn't writing to style on every single move event.
+    const h = handleAt(e);
+    const key = h ? h.kind + h.index : null;
+    if (key !== hovering) { hovering = key; refreshCursor(); }
+    return;
+  }
+  const p = worldPoint(e);
+  if (drag.kind === 'apex') { segments[drag.index].apex = p; retimeAuto(drag.index); }
+  else {
+    // Moving a landing drags its adjacent arcs with it, so they keep their
+    // shape relative to the points instead of snapping back to default.
+    const old = points[drag.index];
+    const dx = p.x - old.x, dy = p.y - old.y;
+    if (drag.index > 0) { const s = segments[drag.index-1]; s.apex = { x: s.apex.x + dx/2, y: s.apex.y + dy/2 }; }
+    if (drag.index < segments.length) { const s = segments[drag.index]; s.apex = { x: s.apex.x + dx/2, y: s.apex.y + dy/2 }; }
+    points[drag.index] = p;
+    // Both hops touching this landing changed shape.
+    retimeAuto(drag.index - 1);
+    retimeAuto(drag.index);
+  }
+  syncUI();
+});
+canvas.addEventListener('pointerup', () => { drag = null; refreshCursor(); });
+canvas.addEventListener('pointercancel', () => { drag = null; refreshCursor(); });
+// Leaving the canvas ends the hover, so the cursor doesn't get stuck as 'move'.
+canvas.addEventListener('pointerleave', () => { hovering = null; refreshCursor(); });
+
+// Wheel zooms around the cursor, so the point being inspected stays put.
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  setViewZoom(viewZoom * (e.deltaY < 0 ? 1.1 : 1/1.1), canvasPixel(e));
+}, { passive: false });
+
+// Middle-drag or Alt+drag pans. Move/up live on window so the drag keeps
+// tracking when the pointer leaves the canvas.
+canvas.addEventListener('mousedown', e => {
+  if (!(e.button === 1 || (e.button === 0 && e.altKey))) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  panDrag = { startX: e.clientX, startY: e.clientY, panX: viewPanX, panY: viewPanY,
+              sx: canvas.width / rect.width, sy: canvas.height / rect.height };
+  refreshCursor();
+});
+window.addEventListener('mousemove', e => {
+  if (!panDrag) return;
+  viewPanX = panDrag.panX + (e.clientX - panDrag.startX) * panDrag.sx;
+  viewPanY = panDrag.panY + (e.clientY - panDrag.startY) * panDrag.sy;
+  render();
+});
+window.addEventListener('mouseup', () => {
+  if (panDrag) { panDrag = null; refreshCursor(); }
+});
+zoomInBtn.addEventListener('click',  () => setViewZoom(viewZoom * 1.25));
+zoomOutBtn.addEventListener('click', () => setViewZoom(viewZoom / 1.25));
+zoomReadout.addEventListener('click', resetView);
+
+// ---------- Controls ----------
+[radiusInput, colourInput, widthInput, heightInput, fpsInput,
+ showGridInput, showDotsInput, gridSizeInput, bgImgOpacity, bgImgX, bgImgY].forEach(el =>
+  el.addEventListener('input', syncUI));
+
+// ---------- Guide image ----------
+bgImgBtn.addEventListener('click', () => bgImgInput.click());
+bgImgInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      bgImg = img;
+      bgImgLabel.textContent = file.name;
+      bgImgClearBtn.disabled = false;
+      syncUI();
+    };
+    img.onerror = () => { bgImgLabel.textContent = 'Could not read that image'; };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  bgImgInput.value = '';   // so choosing the same file again still fires
+});
+bgImgClearBtn.addEventListener('click', () => {
+  bgImg = null;
+  bgImgLabel.textContent = 'No image chosen';
+  bgImgClearBtn.disabled = true;
+  syncUI();
+});
+
+const bindNum = (el, key, min, max) => {
+  el.addEventListener('input', () => {
+    const segs = selSegs();
+    if (!segs.length) return;
+    // A blank or half-typed field means "leave it alone". Without this guard, an
+    // empty field would stamp the fallback across every selected bounce.
+    if (!Number.isFinite(parseFloat(el.value))) return;
+    const v = clampNum(el.value, min, max, segs[0][key]);
+    segs.forEach(s => { s[key] = v; });
+    syncUI();
+  });
+  // On blur or Enter, show what is actually stored. syncEditor skips focused
+  // fields so it cannot fight the caret while typing, which left the box free
+  // to disagree with the value in use once editing ended.
+  el.addEventListener('change', () => {
+    const segs = selSegs();
+    if (!segs.length) return;
+    el.value = clampNum(el.value, min, max, segs[0][key]);
+  });
+};
+bindNum(durInput, 'duration', 0.05, 10);
+durInput.addEventListener('input', () => {
+  // Typing a time hands control to the author. Unticking the box in the same
+  // breath is what makes that legible — otherwise the arc would silently stop
+  // driving the timing for reasons nobody could see.
+  if (!Number.isFinite(parseFloat(durInput.value))) return;
+  selSegs().forEach(s => { s.autoTime = false; });
+  autoTimeInput.checked = false;
+});
+autoTimeInput.addEventListener('change', () => {
+  const segs = selSegs();
+  if (!segs.length) return;
+  segs.forEach(s => { s.autoTime = autoTimeInput.checked; });
+  if (autoTimeInput.checked) selList().forEach(i => retimeAuto(i));
+  syncUI();
+});
+bindNum(holdInput, 'hold', 0, 5);
+bindNum(hangEaseInput, 'hangEase', 0, 200);
+bindNum(squashInput, 'squash', 0, 0.9);
+bindNum(squashDurInput, 'squashDur', 0.02, 1);
+bindNum(stretchInput, 'stretch', 0, 2.5);
+delBtn.addEventListener('click', () => {
+  const kill = new Set(selList());
+  if (!kill.size) return;
+  // Removing hop i removes the landing it flies to. Rather than splicing in a
+  // loop and juggling shifting indices, rebuild both arrays in one pass and
+  // then rebuild the arc of any hop that now bridges a different pair of
+  // points — identity comparison catches exactly those.
+  const before = segments.map((s, i) => ({ s, p0: points[i], p1: points[i+1] }));
+  const keptPoints = [points[0]];
+  const keptSegs = [];
+  segments.forEach((s, i) => {
+    if (kill.has(i)) return;
+    keptSegs.push(s);
+    keptPoints.push(points[i+1]);
+  });
+  points = keptPoints;
+  segments = keptSegs;
+  segments.forEach((s, i) => {
+    const was = before.find(b => b.s === s);
+    if (was && (was.p0 !== points[i] || was.p1 !== points[i+1])) {
+      s.apex = defaultApex(points[i], points[i+1]);
+      retimeAuto(i);
+    }
+  });
+  selectedIdx = new Set(); selAnchor = null;
+  playT = 0; syncUI();
+});
+clearBtn.addEventListener('click', () => {
+  points = []; segments = []; selectedIdx = new Set(); selAnchor = null; playT = 0; playing = false;
+  playBtn.textContent = 'Play'; syncUI();
+});
+
+// ---------- Transport ----------
+playBtn.addEventListener('click', () => {
+  if (!segments.length) return;
+  playing = !playing;
+  playBtn.textContent = playing ? 'Pause' : 'Play';
+  if (playing && playT >= totalTime()) playT = 0;
+  lastFrameMs = performance.now();
+});
+scrub.addEventListener('input', () => {
+  playing = false; playBtn.textContent = 'Play';
+  playT = (scrub.value / 1000) * totalTime();
+  syncUI();
+});
+function tick(now) {
+  if (playing) {
+    const dt = (now - lastFrameMs) / 1000;
+    lastFrameMs = now;
+    playT += dt;
+    if (playT >= totalTime()) { playT = totalTime(); playing = false; playBtn.textContent = 'Play'; }
+    syncUI();
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ---------- Save / load ----------
+// A .bounce file is plain JSON and self-contained: the guide image travels with
+// it as a data URL, so a scene opens the same way on another machine.
+saveBtn.addEventListener('click', () => {
+  const c = cfg();
+  const data = {
+    version: 1,
+    comp: { width: c.w, height: c.h, fps: c.fps },
+    ball: { radius: c.r, colour: c.colour },
+    grid: { show: showGridInput.checked, size: c.grid },
+    guide: bgImg ? {
+      src: bgImg.src,
+      opacity: parseFloat(bgImgOpacity.value) || 0,
+      x: parseFloat(bgImgX.value) || 0,
+      y: parseFloat(bgImgY.value) || 0,
+    } : null,
+    points: points.map(p => ({ x: +p.x.toFixed(3), y: +p.y.toFixed(3) })),
+    bounces: segments.map(s => ({
+      apex: { x: +s.apex.x.toFixed(3), y: +s.apex.y.toFixed(3) },
+      duration: s.duration, hold: s.hold, hangEase: s.hangEase ?? 100,
+      autoTime: s.autoTime !== false,
+      squash: s.squash, squashDur: s.squashDur, stretch: s.stretch ?? 0.3,
+    })),
+  };
+  download('bounce-scene.bounce', JSON.stringify(data));
+});
+
+loadBtn.addEventListener('click', () => loadInput.click());
+loadInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    let data;
+    try { data = JSON.parse(ev.target.result); }
+    catch (err) {
+      alert('That file could not be read. It may not be a Bounce Motion scene.');
+      loadInput.value = ''; return;
+    }
+    if (!data || !Array.isArray(data.points) || !Array.isArray(data.bounces)) {
+      alert('That does not look like a Bounce Motion scene file.');
+      loadInput.value = ''; return;
+    }
+    applyScene(data);
+    loadInput.value = '';
+  };
+  reader.readAsText(file);
+});
+
+function applyScene(d) {
+  const comp = d.comp || {}, ball = d.ball || {}, grid = d.grid || {};
+  widthInput.value  = clampInt(comp.width, 250, 4000, 1920);
+  heightInput.value = clampInt(comp.height, 250, 4000, 1080);
+  fpsInput.value    = clampInt(comp.fps, 12, 120, 30);
+  radiusInput.value = clampInt(ball.radius, 4, 400, 48);
+  colourInput.value = /^#[0-9a-f]{3,8}$/i.test(String(ball.colour || '')) ? ball.colour : '#e3aa4e';
+  showGridInput.checked = grid.show !== false;
+  gridSizeInput.value = clampInt(grid.size, 5, 500, 60);
+
+  // The whole app assumes points.length === bounces.length + 1. A truncated or
+  // hand-edited file could break that, and every lookup downstream would read
+  // past the end. Rather than trusting the file, keep only the longest prefix
+  // that satisfies the invariant.
+  const pts = d.points
+    .filter(p => p && Number.isFinite(+p.x) && Number.isFinite(+p.y))
+    .map(p => ({ x: +p.x, y: +p.y }));
+  const n = Math.max(0, Math.min(pts.length - 1, d.bounces.length));
+  points = pts.slice(0, n + 1);
+  segments = d.bounces.slice(0, n).map((b, i) => {
+    // Start from a valid default, then accept only fields that check out. A
+    // missing or malformed apex therefore yields a sensible arc, not a NaN.
+    const s = newSegment(points[i], points[i + 1]);
+    if (b && b.apex && Number.isFinite(+b.apex.x) && Number.isFinite(+b.apex.y)) {
+      s.apex = { x: +b.apex.x, y: +b.apex.y };
+    }
+    s.duration  = clampNum(b && b.duration,  0.05, 10, s.duration);
+    s.hold      = clampNum(b && b.hold,      0,    5,  s.hold);
+    s.hangEase  = clampNum(b && b.hangEase,  0,    200, s.hangEase);
+    s.squash    = clampNum(b && b.squash,    0,    0.9, s.squash);
+    s.squashDur = clampNum(b && b.squashDur, 0.02, 1,  s.squashDur);
+    s.stretch   = clampNum(b && b.stretch,   0,    2.5, s.stretch);
+    s.autoTime = !(b && b.autoTime === false);
+    return s;
+  });
+
+  selectedIdx = new Set(); selAnchor = null;
+  playT = 0; playing = false; playBtn.textContent = 'Play';
+
+  // Guide image last, because it decodes asynchronously — the rest of the scene
+  // is already on screen by the time it appears.
+  bgImg = null;
+  bgImgLabel.textContent = 'No image chosen';
+  bgImgClearBtn.disabled = true;
+  const g = d.guide;
+  if (g && typeof g.src === 'string') {
+    bgImgOpacity.value = clampInt(g.opacity, 0, 100, 50);
+    bgImgX.value = clampNum(g.x, -20000, 20000, 0);
+    bgImgY.value = clampNum(g.y, -20000, 20000, 0);
+    const img = new Image();
+    img.onload = () => {
+      bgImg = img;
+      bgImgLabel.textContent = 'Guide image';
+      bgImgClearBtn.disabled = false;
+      syncUI();
+    };
+    img.onerror = () => { bgImgLabel.textContent = 'Guide image could not be loaded'; };
+    img.src = g.src;
+  }
+  resetView();
+  syncUI();
+}
+
+// ---------- Export ----------
+// Baked per frame, like Tumble Motion: whatever the curve does on screen is
+// exactly what lands in the comp, with no attempt to fit AE's own interpolation.
+function buildFrames() {
+  const c = cfg();
+  stretchRef = c.w * STRETCH_REF_FACTOR;
+  const total = totalTime();
+  const n = Math.max(1, Math.round(total * c.fps));
+  const frames = [];
+  for (let f = 0; f <= n; f++) {
+    const b = ballAt(f / c.fps);
+    if (!b) break;
+    frames.push({
+      t: f / c.fps,
+      x: +b.x.toFixed(3), y: +b.y.toFixed(3),
+      sx: +(b.sx * 100).toFixed(3), sy: +(b.sy * 100).toFixed(3),
+      rot: +(b.rot * 180 / Math.PI).toFixed(3),
+    });
+  }
+  return frames;
+}
+function download(name, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'application/octet-stream' }));
+  a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+exportBtn.addEventListener('click', () => {
+  const c = cfg();
+  const data = { fps: c.fps, width: c.w, height: c.h, radius: c.r,
+                 colour: c.colour, frames: buildFrames() };
+  const jsx = [
+    '// Bounce Motion \u2192 After Effects',
+    '// Run with your composition open: File > Scripts > Run Script File',
+    'var data = ' + JSON.stringify(data) + ';',
+    '(function () {',
+    '    var comp = app.project.activeItem;',
+    '    if (!(comp && comp instanceof CompItem)) {',
+    '        alert("Open the composition you want the ball added to, then run this again.");',
+    '        return;',
+    '    }',
+    '    app.beginUndoGroup("Bounce Motion");',
+    '    var d = data.radius * 2;',
+    '    var layer = comp.layers.addShape();',
+    '    layer.name = "Bounce Ball";',
+    '    var grp = layer.property("Contents").addProperty("ADBE Vector Group");',
+    '    var gc = grp.property("Contents");',
+    '    var ell = gc.addProperty("ADBE Vector Shape - Ellipse");',
+    '    ell.property("ADBE Vector Ellipse Size").setValue([d, d]);',
+    '    var fill = gc.addProperty("ADBE Vector Graphic - Fill");',
+    '    var col = data.colour.replace("#", "");',
+    '    if (col.length === 3) { col = col.charAt(0)+col.charAt(0)+col.charAt(1)+col.charAt(1)+col.charAt(2)+col.charAt(2); }',
+    '    fill.property("ADBE Vector Fill Color").setValue([',
+    '        parseInt(col.substring(0,2),16)/255,',
+    '        parseInt(col.substring(2,4),16)/255,',
+    '        parseInt(col.substring(4,6),16)/255, 1]);',
+    '    layer.property("Transform").property("Anchor Point").setValue([0, 0]);',
+    '    var pos = layer.property("Transform").property("Position");',
+    '    var scl = layer.property("Transform").property("Scale");',
+    '    var rot = layer.property("Transform").property("Rotation");',
+    '    var times = [], posV = [], sclV = [], rotV = [];',
+    '    for (var i = 0; i < data.frames.length; i++) {',
+    '        var fr = data.frames[i];',
+    '        times.push(fr.t);',
+    '        posV.push([fr.x, fr.y]);',
+    '        sclV.push([fr.sx, fr.sy]);',
+    '        rotV.push(fr.rot);',
+    '    }',
+    '    pos.setValuesAtTimes(times, posV);',
+    '    scl.setValuesAtTimes(times, sclV);',
+    '    rot.setValuesAtTimes(times, rotV);',
+    '    for (var k = 1; k <= pos.numKeys; k++) {',
+    '        pos.setInterpolationTypeAtKey(k, KeyframeInterpolationType.LINEAR, KeyframeInterpolationType.LINEAR);',
+    '        scl.setInterpolationTypeAtKey(k, KeyframeInterpolationType.LINEAR, KeyframeInterpolationType.LINEAR);',
+    '        rot.setInterpolationTypeAtKey(k, KeyframeInterpolationType.LINEAR, KeyframeInterpolationType.LINEAR);',
+    '    }',
+    '    app.endUndoGroup();',
+    '})();',
+  ].join('\n');
+  download('bounce-motion.jsx', jsx);
+});
+
+updateZoomReadout();
+syncUI();
+</script>
+</body>
+</html>
